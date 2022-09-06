@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 
 from django.contrib.auth.models import User
 from startpage.serializers import UserSerializer
+from startpage.models import ServerInfo
 from mainpage.models import UserProfile, Sub, Publ, PublRating, PublRatingUser, UserProfileStar
 from home.models import Hashtag, Donat, Mention
 from django.db.models import Q, Count, Sum, F
@@ -76,6 +77,7 @@ class HomeViewSet(viewsets.ModelViewSet):
     username = User.objects.get(username=request.user.username)
     subs = Sub.objects.values_list('username', flat=True).filter(subscriber=username)
     datetime_request = request.data['datetime_request']
+    server_url = ServerInfo.objects.get(id=1).url
     if Publ.objects.filter(username__in=subs,parent_id=0,remote=False).exists():
       if not datetime_request:
         datetime_start = Publ.objects.values_list('datetime', flat=True).filter(username__in=subs,parent_id=0,remote=False).order_by('-datetime')[0]
@@ -113,11 +115,11 @@ class HomeViewSet(viewsets.ModelViewSet):
           if comment_count[j]['parent_id'] == data[i]['id']:
             data[i]['comments'] = comment_count[j]['count']
         data[i]['images'] = []
-        content = os.listdir(os.getcwd() + '\\media\\profile\\' + str(data[i]['username']))
+        content = os.listdir(os.getcwd() + '/media/profile/' + str(data[i]['username']))
         content = [img.split('_') for img in content if 'jpeg' in img or 'gif' in img]
         for j in range(len(content)):
           if data[i]['id'] == int(content[j][0]):
-            full_image = 'http://127.0.0.1:8000/media/profile/{}/{}'.format(str(data[i]['username']),(content[j][0] + '_' + content[j][1]))
+            full_image = '{}/media/profile/{}/{}'.format(server_url,str(data[i]['username']),(content[j][0] + '_' + content[j][1]))
             data[i]['images'].append(full_image)
       return Response(data, status=status.HTTP_200_OK)
     else:
@@ -129,6 +131,7 @@ class HomeViewSet(viewsets.ModelViewSet):
     subs = Sub.objects.values_list('username', flat=True).filter(subscriber=username)
     datetime_request = request.data['datetime_request']
     filter = UserProfile.objects.values('censor','nude').filter(username__username=request.user.username)[0]
+    server_url = ServerInfo.objects.get(id=1).url
     if Publ.objects.filter(parent_id=0,remote=False).exists():
       data = filter_recommended(datetime_request,username,subs,filter['censor'],filter['nude'])
       publ_list = [publ['id'] for publ in data]
@@ -156,12 +159,11 @@ class HomeViewSet(viewsets.ModelViewSet):
           if comment_count[j]['parent_id'] == data[i]['id']:
             data[i]['comments'] = comment_count[j]['count']
         data[i]['images'] = []
-        content = os.listdir(os.getcwd() + '\\media\\profile\\' + str(data[i]['username']))
+        content = os.listdir(os.getcwd() + '/media/profile/' + str(data[i]['username']))
         content = [img.split('_') for img in content if 'jpeg' in img or 'gif' in img]
         for j in range(len(content)):
           if data[i]['id'] == int(content[j][0]):
-            full_image = 'http://127.0.0.1:8000/media/profile/{}/{}'.format(str(data[i]['username']),
-                                                                            (content[j][0] + '_' + content[j][1]))
+            full_image = '{}/media/profile/{}/{}'.format(server_url,str(data[i]['username']),(content[j][0] + '_' + content[j][1]))
             data[i]['images'].append(full_image)
       return Response(data, status=status.HTTP_200_OK)
     else:
@@ -214,6 +216,7 @@ class HashtagViewSet(viewsets.ModelViewSet):
     hashtag = request.data['hashtag']
     datetime_request = request.data['datetime_request']
     username = User.objects.get(username=request.user.username)
+    server_url = ServerInfo.objects.get(id=1).url
     if not datetime_request:
       publ = set(
         Hashtag.objects.values_list('publication', flat=True).filter(hashtag=hashtag).order_by('-datetime')[:10])
@@ -249,12 +252,11 @@ class HashtagViewSet(viewsets.ModelViewSet):
         if comment_count[j]['parent_id'] == data[i]['id']:
           data[i]['comments'] = comment_count[j]['count']
       data[i]['images'] = []
-      content = os.listdir(os.getcwd() + '\\media\\profile\\' + str(data[i]['username']))
+      content = os.listdir(os.getcwd() + '/media/profile/' + str(data[i]['username']))
       content = [img.split('_') for img in content if 'jpeg' in img or 'gif' in img]
       for j in range(len(content)):
         if data[i]['id'] == int(content[j][0]):
-          full_image = 'http://127.0.0.1:8000/media/profile/{}/{}'.format(str(data[i]['username']),
-                                                                          (content[j][0] + '_' + content[j][1]))
+          full_image = '{}/media/profile/{}/{}'.format(server_url,str(data[i]['username']),(content[j][0] + '_' + content[j][1]))
           data[i]['images'].append(full_image)
     return Response(data, status=status.HTTP_200_OK)
 
@@ -335,6 +337,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
   def get_mention(self, request, *args, **kwargs):
     men_datetime = request.data['men_datetime']
     comment = request.data['comment']
+    server_url = ServerInfo.objects.get(id=1).url
     if comment == False:
       if Mention.objects.filter(username__id=request.user.id, publication__parent_id=0).exists():
         if not men_datetime:
@@ -369,12 +372,11 @@ class ActivityViewSet(viewsets.ModelViewSet):
             if comment_count[j]['parent_id'] == data[i]['publ_id']:
               data[i]['comments'] = comment_count[j]['count']
           data[i]['images'] = []
-          content = os.listdir(os.getcwd() + '\\media\\profile\\' + str(data[i]['publ_user_id']))
+          content = os.listdir(os.getcwd() + '/media/profile/' + str(data[i]['publ_user_id']))
           content = [img.split('_') for img in content if 'jpeg' in img or 'gif' in img]
           for j in range(len(content)):
             if data[i]['publ_id'] == int(content[j][0]):
-              full_image = 'http://127.0.0.1:8000/media/profile/{}/{}'.format(str(data[i]['publ_user_id']),
-                                                                              (content[j][0] + '_' + content[j][1]))
+              full_image = '{}/media/profile/{}/{}'.format(server_url,str(data[i]['publ_user_id']),(content[j][0] + '_' + content[j][1]))
               data[i]['images'].append(full_image)
 
         return Response(data, status=status.HTTP_200_OK)
@@ -426,12 +428,11 @@ class ActivityViewSet(viewsets.ModelViewSet):
             if comment_count[j]['parent_id'] == data[i]['publ_id']:
               data[i]['comments'] = comment_count[j]['count']
           data[i]['images'] = []
-          content = os.listdir(os.getcwd() + '\\media\\profile\\' + str(data[i]['publ_user_id']))
+          content = os.listdir(os.getcwd() + '/media/profile/' + str(data[i]['publ_user_id']))
           content = [img.split('_') for img in content if 'jpeg' in img or 'gif' in img]
           for j in range(len(content)):
             if data[i]['publ_id'] == int(content[j][0]):
-              full_image = 'http://127.0.0.1:8000/media/profile/{}/{}'.format(str(data[i]['publ_user_id']),
-                                                                              (content[j][0] + '_' + content[j][1]))
+              full_image = '{}/media/profile/{}/{}'.format(server_url,str(data[i]['publ_user_id']),(content[j][0] + '_' + content[j][1]))
               data[i]['images'].append(full_image)
 
         return Response(data, status=status.HTTP_200_OK)

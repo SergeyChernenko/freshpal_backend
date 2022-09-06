@@ -9,6 +9,9 @@ class RestorePassword(models.Model):
     username = models.ForeignKey(User, on_delete=models.CASCADE, null=True, verbose_name="Username")
     token = models.CharField(max_length=100, verbose_name="Token")
 
+class ServerInfo(models.Model):
+    url = models.CharField(max_length=100, verbose_name="url")
+
 User._meta.get_field('email').blank = False
 
 

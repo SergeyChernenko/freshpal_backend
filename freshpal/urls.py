@@ -15,6 +15,7 @@ urlpatterns = [
     path('api/mainpage/', include('mainpage.urls')),
     path('api/home/', include('home.urls')),
     path('admin/', admin.site.urls),
+    path('explorer/', include('explorer.urls')),
 ]
 
 urlpatterns += staticfiles_urlpatterns()

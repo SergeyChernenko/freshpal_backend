@@ -9,9 +9,9 @@ import re,string
 def more_zero_user(new_sum, new_rating):
   start_sum = list(Rating.objects.values('level', 'like', 'sum').filter(sum__lte=new_sum).order_by("-level"))[0]
   finish_sum = list(Rating.objects.values('level', 'like', 'sum').filter(sum__gt=new_sum).order_by("level"))[0]
-  balance = round((finish_sum['sum'] - new_sum) / (finish_sum['sum'] - start_sum['sum']), 2)
+  balance = (finish_sum['sum'] - new_sum) / (finish_sum['sum'] - start_sum['sum'])
   new_level = start_sum['level'] + (1 - balance)
-  new_rating.level = new_level
+  new_rating.level = round(new_level, 2)
   new_rating.like = start_sum['like']
   new_rating.sum = new_sum
   new_rating.positive = True
@@ -21,10 +21,10 @@ def less_zero_user(new_sum, new_rating):
   new_sum = abs(new_sum)
   start_sum = list(Rating.objects.values('level', 'like', 'sum').filter(sum__lte=new_sum).order_by("-level"))[0]
   finish_sum = list(Rating.objects.values('level', 'like', 'sum').filter(sum__gt=new_sum).order_by("level"))[0]
-  balance = round((finish_sum['sum'] - new_sum) / (finish_sum['sum'] - start_sum['sum']), 2)
+  balance = (finish_sum['sum'] - new_sum) / (finish_sum['sum'] - start_sum['sum'])
   new_level = start_sum['level'] + (1 - balance)
-  new_rating.level = new_level
-  new_rating.like = 0
+  new_rating.level = round(new_level, 2)
+  new_rating.like = 1
   new_rating.sum = new_sum
   new_rating.positive = False
   new_rating.save()
@@ -75,9 +75,9 @@ def dislike_user(username, like_cost):
 def more_zero_publ(new_sum, new_rating, pos):
   start_sum = list(Rating.objects.values('level', 'like', 'sum').filter(sum__lte=new_sum).order_by("-level"))[0]
   finish_sum = list(Rating.objects.values('level', 'like', 'sum').filter(sum__gt=new_sum).order_by("level"))[0]
-  balance = round((finish_sum['sum'] - new_sum) / (finish_sum['sum'] - start_sum['sum']), 2)
+  balance = (finish_sum['sum'] - new_sum) / (finish_sum['sum'] - start_sum['sum'])
   new_level = start_sum['level'] + (1 - balance)
-  new_rating.level = new_level
+  new_rating.level = round(new_level, 2)
   new_rating.sum = new_sum
   new_rating.positive = True
   if pos == True:
@@ -90,9 +90,9 @@ def less_zero_publ(new_sum, new_rating, pos):
   new_sum = abs(new_sum)
   start_sum = list(Rating.objects.values('level', 'like', 'sum').filter(sum__lte=new_sum).order_by("-level"))[0]
   finish_sum = list(Rating.objects.values('level', 'like', 'sum').filter(sum__gt=new_sum).order_by("level"))[0]
-  balance = round((finish_sum['sum'] - new_sum) / (finish_sum['sum'] - start_sum['sum']), 2)
+  balance = (finish_sum['sum'] - new_sum) / (finish_sum['sum'] - start_sum['sum'])
   new_level = start_sum['level'] + (1 - balance)
-  new_rating.level = new_level
+  new_rating.level = round(new_level, 2)
   new_rating.sum = new_sum
   new_rating.positive = False
   if pos == True:

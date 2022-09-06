@@ -15,7 +15,7 @@ class UserProfile(models.Model):
     last_visit = models.DateTimeField(null=True)
     censor = models.BooleanField(default=False)
     nude = models.BooleanField(default=False)
-    sex = models.TextField(max_length=6, null=True)
+    sex = models.CharField(max_length=6, null=True)
 
 class UserProfileStar(models.Model):
     username = models.ForeignKey(User, on_delete=models.CASCADE, null=True)

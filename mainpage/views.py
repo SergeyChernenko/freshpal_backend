@@ -7,13 +7,14 @@ from rest_framework.decorators import action
 
 from django.core import serializers
 from django.contrib.auth.models import User
-from startpage.models import Verification
+from startpage.models import ServerInfo
 from startpage.serializers import UserSerializer
 from mainpage.models import UserProfile, Sub, Publ, PublRating, PublRatingUser, Rating, UserProfileStar
 from home.models import Hashtag, Mention
 from mainpage.serializers import UserProfileSerializer, SubSerializer, PublSerializer
 from django.db.models import Q, Count
 from django.contrib.auth.hashers import check_password
+
 
 
 from mainpage.helpers import like_user, dislike_user, like_publ, dislike_publ, add_cost, check_text_censor, clean_text, detector_nude
@@ -43,18 +44,15 @@ class AvatarViewSet(viewsets.ModelViewSet):
     username = str(request.user.id)
     imgstr = re.search(r'base64,(.*)', dataurl).group(1)
     binary_data = a2b_base64(imgstr)
-    os.chdir(os.getcwd() + '\media')
-    os.chdir(os.getcwd() + '\profile')
-    os.chdir(username)
+    path_start = os.getcwd() + '/media/profile/' + username + '/'
     path = '{}.png'.format(username)
-    Out = open(path, 'wb')
+    Out = open(path_start+path, 'wb')
     Out.write(binary_data)
     Out.close()
-    image = Image.open(path)
+    image = Image.open(path_start+path)
     image = image.resize((150, 150), Image.ANTIALIAS)
-    os.remove(path)
-    image.save(fp=path)
-    os.chdir('../../..')
+    os.remove(path_start+path)
+    image.save(fp=path_start+path)
     return Response(path, status=status.HTTP_200_OK)
 
 
@@ -132,6 +130,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     visit.last_visit = last
     visit.save()
     return Response(status=status.HTTP_200_OK)
+
 
   @action(methods=['POST'], detail=False)
   def get_username(self, request, *args, **kwargs):
@@ -220,7 +219,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
   @action(methods=['POST'], detail=False)
   def search_username(self, request, *args, **kwargs):
-    username = request.data['username']
+    username = request.data['username'].lower()
     if username:
       result = UserProfile.objects.values('username', 'username__username','level', 'positive').filter(username__username__startswith=username)
       return Response(result, status=status.HTTP_200_OK)
@@ -229,7 +228,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
   @action(methods=['POST'], detail=False)
   def search_hashtag(self, request, *args, **kwargs):
-    hashtag = request.data['hashtag'][1:]
+    hashtag = request.data['hashtag'][1:].lower()
     if hashtag:
       result = Hashtag.objects.values('hashtag').annotate(count=Count('hashtag')).filter(hashtag__startswith=hashtag).order_by("-count")
       return Response(result, status=status.HTTP_200_OK)
@@ -238,12 +237,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
 
 def save_image(publ_id, images, username_id, object):
-  path_start = os.getcwd()
-  if len(path_start.split("\\")) > 4:
-    os.chdir('../../..')
-  os.chdir(os.getcwd() + '\media')
-  os.chdir(os.getcwd() + '\profile')
-  os.chdir(username_id)
+  path_start = os.getcwd() + '/media/profile/' +username_id + '/'
   for i in range(len(images)):
     format = images[i][:17].split('/')[1].split(';')[0]
     if format == 'png' or format == 'jpeg':
@@ -261,8 +255,8 @@ def save_image(publ_id, images, username_id, object):
         width = int(image.shape[1] / (image.shape[1] / 1920))
       resized_image = cv2.resize(image, (width, height), interpolation=cv2.INTER_AREA)
       name = '{}_{}.jpeg'.format(publ_id, i)
-      cv2.imwrite(name, resized_image)
-      if detector_nude(name) == True:
+      cv2.imwrite(path_start+name, resized_image)
+      if detector_nude(path_start+name) == True:
         object.nude = True
       else:
         object.nude = False
@@ -273,7 +267,7 @@ def save_image(publ_id, images, username_id, object):
       Out = open(name, 'wb')
       Out.write(binary_data)
       Out.close()
-  os.chdir('../../..')
+
 
 class PublViewSet(viewsets.ModelViewSet):
   queryset = User.objects.all()
@@ -335,6 +329,7 @@ class PublViewSet(viewsets.ModelViewSet):
     username = User.objects.get(username=request.data['username'])
     username_token = User.objects.get(username=request.user.username)
     datetime_request = request.data['datetime_request']
+    server_url = ServerInfo.objects.get(id=1).url
     if Publ.objects.filter(username=username,parent_id=0,remote=False).exists():
       if not datetime_request:
         datetime_start = Publ.objects.values_list('datetime', flat=True).filter(username=username,parent_id=0,remote=False).order_by('-datetime')[0]
@@ -364,12 +359,11 @@ class PublViewSet(viewsets.ModelViewSet):
           if comment_count[j]['parent_id'] == data[i]['id']:
             data[i]['comments'] = comment_count[j]['count']
         data[i]['images'] = []
-        content = os.listdir(os.getcwd() + '\\media\\profile\\' + str(username.id))
+        content = os.listdir(os.getcwd() + '/media/profile/' + str(username.id))
         content = [img.split('_') for img in content if 'jpeg' in img or 'gif' in img]
         for j in range(len(content)):
           if data[i]['id'] == int(content[j][0]):
-            full_image = 'http://127.0.0.1:8000/media/profile/{}/{}'.format(str(username.id),
-                                                                            (content[j][0] + '_' + content[j][1]))
+            full_image = '{}/media/profile/{}/{}'.format(server_url,str(username.id),(content[j][0] + '_' + content[j][1]))
             data[i]['images'].append(full_image)
       return Response(data, status=status.HTTP_200_OK)
     else:
@@ -380,6 +374,7 @@ class PublViewSet(viewsets.ModelViewSet):
     id_url = request.data['id_url']
     username_token = request.user.username
     username = User.objects.get(username=username_token)
+    server_url = ServerInfo.objects.get(id=1).url
     if Publ.objects.filter(id=id_url).exists():
       data = Publ.objects.get(id=id_url)
       if username_token == str(data.username.username):
@@ -413,11 +408,11 @@ class PublViewSet(viewsets.ModelViewSet):
       data_publ['positive'] = publ_rating['positive']
       data_publ['sum_like'] = publ_rating['sum_like']
       data_publ['sum_dislike'] = publ_rating['sum_dislike']
-      content = os.listdir(os.getcwd() + '\\media\\profile\\' + str(data.username.id))
+      content = os.listdir(os.getcwd() + '/media/profile/' + str(data.username.id))
       content = [img.split('_') for img in content if 'jpeg' in img or 'gif' in img]
       for i in range(len(content)):
         if content[i][0] == id_url:
-          full_image = 'http://127.0.0.1:8000/media/profile/{}/{}'.format(str(data.username.id),(content[i][0] + '_' + content[i][1]))
+          full_image = '{}/media/profile/{}/{}'.format(server_url,str(data.username.id),(content[i][0] + '_' + content[i][1]))
           data_publ['images'].append(full_image)
       json_dump = json.dumps(data_publ)
       json_object = json.loads(json_dump)
@@ -471,15 +466,12 @@ class PublViewSet(viewsets.ModelViewSet):
       data.censor = True
     else:
       data.censor = False
-    content = os.listdir(os.getcwd() + '\\media\\profile\\' + str(request.user.id))
+    content = os.listdir(os.getcwd() + '/media/profile/' + str(request.user.id))
     images = [img for img in content if id_url in img.split('_')[0]]
     if images:
-      os.chdir(os.getcwd() + '\media')
-      os.chdir(os.getcwd() + '\profile')
-      os.chdir(str(request.user.id))
+      path_start = os.getcwd() + '/media/profile/' + str(request.user.id) + '/'
       for img in images:
-        os.remove(img)
-      os.chdir('../../..')
+        os.remove(path_start+img)
     if request.data['images']:
       save_image(id_url, request.data['images'], str(request.user.id),data)
 
@@ -507,15 +499,12 @@ class PublViewSet(viewsets.ModelViewSet):
     publ_rating.save()
     if PublRatingUser.objects.filter(publication=request.data['id_url']).exists():
       PublRatingUser.objects.filter(publication=request.data['id_url']).delete()
-    content = os.listdir(os.getcwd() + '\\media\\profile\\' + str(request.user.id))
+    content = os.listdir(os.getcwd() + '/media/profile/' + str(request.user.id))
     images = [img for img in content if request.data['id_url'] in img.split('_')[0]]
     if images:
-      os.chdir(os.getcwd() + '\media')
-      os.chdir(os.getcwd() + '\profile')
-      os.chdir(str(request.user.id))
+      path_start = os.getcwd() + '/media/profile/' + str(request.user.id) + '/'
       for img in images:
-        os.remove(img)
-      os.chdir('../../..')
+        os.remove(path_start+img)
     return Response(status=status.HTTP_200_OK)
 
   @action(methods=['POST'], detail=False)
@@ -577,6 +566,7 @@ class PublViewSet(viewsets.ModelViewSet):
     datetime_request = request.data['datetime_request']
     type = request.data['type']
     username_token = User.objects.get(username=request.user.username)
+    server_url = ServerInfo.objects.get(id=1).url
     if Publ.objects.filter(parent_id=parent_id,remote=False).exists():
       if type == True:
         if not datetime_request:
@@ -626,12 +616,11 @@ class PublViewSet(viewsets.ModelViewSet):
           if comment_count[j]['parent_id'] == data[i]['id']:
             data[i]['comments'] = comment_count[j]['count']
         data[i]['images'] = []
-        content = os.listdir(os.getcwd() + '\\media\\profile\\' + str(data[i]['username']))
+        content = os.listdir(os.getcwd() + '/media/profile/' + str(data[i]['username']))
         content = [img.split('_') for img in content if 'jpeg' in img or 'gif' in img]
         for j in range(len(content)):
           if data[i]['id'] == int(content[j][0]):
-            full_image = 'http://127.0.0.1:8000/media/profile/{}/{}'.format(str(data[i]['username']),
-                                                                            (content[j][0] + '_' + content[j][1]))
+            full_image = '{}/media/profile/{}/{}'.format(server_url,str(data[i]['username']),(content[j][0] + '_' + content[j][1]))
             data[i]['images'].append(full_image)
       return Response(data, status=status.HTTP_200_OK)
     else:

@@ -15,6 +15,7 @@ from datetime import timedelta
 
 from pathlib import Path
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 
 
@@ -30,7 +31,8 @@ SECRET_KEY = 'b07f(y+6tr@_4m$e7m7=j3d&lg%y!a(@!=u@a2!$&u%k+tpuq@'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+
+ALLOWED_HOSTS = ['127.0.0.1']
 
 
 # Application definition
@@ -47,10 +49,11 @@ INSTALLED_APPS = [
     'home',
     'rest_framework',
     'corsheaders',
-
+    'explorer',
 ]
 
-
+EXPLORER_CONNECTIONS = { 'Default': 'default' }
+EXPLORER_DEFAULT_CONNECTION = 'default'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -62,14 +65,14 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 ]
-CORS_ORIGIN_ALLOW_ALL=True
+#CORS_ORIGIN_ALLOW_ALL=True
 ROOT_URLCONF = 'freshpal.urls'
 
-CORS_ORIGIN_WHITELIST = [
-    'http://192.168.4.100:8080',
-    'http://localhost:8080',
-
-]
+# CORS_ORIGIN_WHITELIST = [
+#     'http://192.168.4.100:8080',
+#     'http://localhost:8080',
+#
+# ]
 
 TEMPLATES = [
     {

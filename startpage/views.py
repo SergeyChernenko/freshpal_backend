@@ -13,16 +13,16 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+
 from uuid import uuid4
 import numpy as np
-import smtplib
+import smtplib, ssl
 import jwt
 import os
 from PIL import Image
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
 
 class UserViewSet(viewsets.ModelViewSet):
   queryset = User.objects.all()
@@ -36,25 +36,54 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 def send_code_email(email, code):
-  addr_from = "freshpalcode@gmail.com"
-  addr_to = email
-  password = "freshpal2021"
+  sender = 'verification@freshpal.me'
+  receiver = email
 
-  msg = MIMEMultipart()
-  msg['From'] = addr_from
-  msg['To'] = addr_to
-  msg['Subject'] = 'Код верификации'
+  message = MIMEMultipart("alternative")
+  message["Subject"] = "Верификация нового пользователя"
+  message["From"] = sender
+  message["To"] = receiver
 
-  body = '''Для подтверждения личности просим ввести данный код в поле проверки. 
-  Код подтверждения  - {}'''.format(code)
-  msg.attach(MIMEText(body, 'plain'))
+  # Create the plain-text and HTML version of your message
+  text = """\
+  Привет друг!
+  Это твой код.
+  {}
+  С уважением,
+  CEO FreshPal
+  Черненко Сергей
+  Мой личный телеграм
+  Телеграм канал""".format(code)
+  html = """
+  <html>
+    <body>    
+      <div style="min-height: 45vh;">
+          <div style="padding: 20px 0px 0px 10px;"><span style="#0c0c0c; font-size: 14pt; font-family: 'Open Sans', sans-serif;">Привет друг!</span></div>
+          <div style="margin: 10px 0px 0px 10px;"><span style="#0c0c0c; font-size: 14pt; font-family: 'Open Sans', sans-serif;">Это твой код.</span></div>
+          <div style="margin: 20px 0px 0px 10px;"><span style="color: #2dba2d; font-size: 14pt; font-family: 'Open Sans', sans-serif;">{}</span></div>
+          <div style="margin: 30px 0px 0px 10px;"><span style="#0c0c0c; font-size: 12pt; font-family: 'Open Sans', sans-serif;">С уважением,</span></div>
+          <div style="margin: 5px 0px 0px 10px;"><span style="#0c0c0c; font-size: 12pt; font-family: 'Open Sans', sans-serif;">CEO FreshPal</span></div>
+          <div style="margin: 5px 0px 0px 10px;"><span style="#0c0c0c; font-size: 12pt; font-family: 'Open Sans', sans-serif;">Черненко Сергей</span></div>
+          <div style="margin: 5px 0px 0px 10px;"><span style="font-size: 12pt; font-family: 'Open Sans', sans-serif;"><a style="color: #36d436;" href="https://t.me/nexusst">Мой личный телеграм</a></span></div>
+          <div style="margin: 5px 0px 0px 10px;"><span style="font-size: 12pt; font-family: 'Open Sans', sans-serif;"><a style="color: #36d436;" href="https://t.me/freshpal">Телеграм канал</a></span></div>
+      </div>
+    </body>
+  </html>
+  """.format(code)
 
-  server = smtplib.SMTP('smtp.gmail.com', 587)
-  server.set_debuglevel(True)
-  server.starttls()
-  server.login(addr_from, password)
-  server.send_message(msg)
-  server.quit()
+  # Turn these into plain/html MIMEText objects
+  part1 = MIMEText(text, "plain")
+  part2 = MIMEText(html, "html")
+
+  # Add HTML/plain-text parts to MIMEMultipart message
+  # The email client will try to render the last part first
+  message.attach(part1)
+  message.attach(part2)
+
+  context = ssl._create_unverified_context()
+  with smtplib.SMTP_SSL("185.143.45.72", 465, context=context) as server:
+    server.login(sender, 'VerificationFreshpal1298')
+    server.sendmail(sender, receiver, message.as_string())
 
 class VerificationViewSet(viewsets.ModelViewSet):
   queryset = User.objects.all()
@@ -88,7 +117,7 @@ class VerificationViewSet(viewsets.ModelViewSet):
       verif.email = email
       code = np.random.randint(100000, 999999)
       verif.code = code
-      # send_code_email(email,code)
+      send_code_email(email,code)
       verif.save()
       return Response(True, status=status.HTTP_200_OK)
     except:
@@ -128,41 +157,69 @@ class RegistrationViewSet(viewsets.ModelViewSet):
     data.like = 1
     data.sum = 0
     data.save()
-
     username_id = str(username.id)
-    os.chdir(os.getcwd() + '\media')
+    media_path = os.getcwd() + '/media/'
     if request.data['sex'] == 'male':
-      avatar = Image.open(r"man.png")
+      avatar = Image.open(media_path+"man.png")
     if request.data['sex'] == 'female':
-      avatar = Image.open(r"woman.png")
-    os.chdir('profile')
-    os.mkdir(username_id)
-    os.chdir(username_id)
+      avatar = Image.open(media_path+"woman.png")
+    os.mkdir(os.getcwd() + '/media/profile/' + username_id)
+    avatar_path = os.getcwd() + '/media/profile/' + username_id + '/'
     name = '{}.png'.format(username_id)
-    avatar.save(fp=name)
-    os.chdir('../../..')
+    avatar.save(fp=avatar_path+name)
     return Response(200, status=status.HTTP_200_OK)
 
 
 def send_link_reset_pas(email, token):
-  addr_from = "freshpalcode@gmail.com"
-  addr_to = email
-  password = "freshpal2021"
+  sender = 'verification@freshpal.me'
+  receiver = email
 
-  msg = MIMEMultipart()
-  msg['From'] = addr_from
-  msg['To'] = addr_to
-  msg['Subject'] = 'Восстановление пароля'
-  url = 'http://localhost:8080/#/restore_password/{}'.format(token)
-  body = '''Для восстановления пароля перейдите по этой ссылке {}'''.format(url)
-  msg.attach(MIMEText(body, 'plain'))
+  message = MIMEMultipart("alternative")
+  message["Subject"] = "Восстановление пароля"
+  message["From"] = sender
+  message["To"] = receiver
 
-  server = smtplib.SMTP('smtp.gmail.com', 587)
-  server.set_debuglevel(True)
-  server.starttls()
-  server.login(addr_from, password)
-  server.send_message(msg)
-  server.quit()
+  # Create the plain-text and HTML version of your message
+  text = """\
+  Привет друг!
+  Для восстановление пароля, перейди по этой ссылке.
+
+  С уважением,
+  CEO FreshPal
+  Вам сюда!
+  Черненко Сергей
+  Мой личный телеграм
+  Телеграм канал"""
+  html = """
+  <html>
+    <body>    
+      <div style="min-height: 45vh;">
+          <div style="padding: 20px 0px 0px 10px;"><span style="#0c0c0c; font-size: 14pt; font-family: 'Open Sans', sans-serif;">Привет друг!</span></div>
+          <div style="margin: 10px 0px 0px 10px;"><span style="#0c0c0c; font-size: 14pt; font-family: 'Open Sans', sans-serif;">Для восстановление пароля, перейди по этой ссылке.</span></div>
+          <div style="margin: 5px 0px 0px 10px;"><span style="font-size: 14pt; font-family: 'Open Sans', sans-serif;"><a style="color: #36d436;" href="https://freshpal.me/restore_password/{}">Вам сюда!</a></span></div>
+          <div style="margin: 30px 0px 0px 10px;"><span style="#0c0c0c; font-size: 12pt; font-family: 'Open Sans', sans-serif;">С уважением,</span></div>
+          <div style="margin: 5px 0px 0px 10px;"><span style="#0c0c0c; font-size: 12pt; font-family: 'Open Sans', sans-serif;">CEO FreshPal</span></div>
+          <div style="margin: 5px 0px 0px 10px;"><span style="#0c0c0c; font-size: 12pt; font-family: 'Open Sans', sans-serif;">Черненко Сергей</span></div>
+          <div style="margin: 5px 0px 0px 10px;"><span style="font-size: 12pt; font-family: 'Open Sans', sans-serif;"><a style="color: #36d436;" href="https://t.me/nexusst">Мой личный телеграм</a></span></div>
+          <div style="margin: 5px 0px 0px 10px;"><span style="font-size: 12pt; font-family: 'Open Sans', sans-serif;"><a style="color: #36d436;" href="https://t.me/freshpal">Телеграм канал</a></span></div>
+      </div>
+    </body>
+  </html>
+  """.format(token)
+
+  # Turn these into plain/html MIMEText objects
+  part1 = MIMEText(text, "plain")
+  part2 = MIMEText(html, "html")
+
+  # Add HTML/plain-text parts to MIMEMultipart message
+  # The email client will try to render the last part first
+  message.attach(part1)
+  message.attach(part2)
+
+  context = ssl._create_unverified_context()
+  with smtplib.SMTP_SSL("185.143.45.72", 465, context=context) as server:
+    server.login(sender, 'VerificationFreshpal1298')
+    server.sendmail(sender, receiver, message.as_string())
 
 class RestorePasswordViewSet(viewsets.ModelViewSet):
   queryset = User.objects.all()
@@ -181,7 +238,7 @@ class RestorePasswordViewSet(viewsets.ModelViewSet):
       reset_pas.username = user
       reset_pas.token = rand_token
       reset_pas.save()
-      #send_link_reset_pas(request.data['email'], rand_token)
+      send_link_reset_pas(request.data['email'], rand_token)
       return Response(status=status.HTTP_200_OK)
     else:
       return Response(status=status.HTTP_200_OK)
