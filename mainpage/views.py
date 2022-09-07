@@ -11,7 +11,7 @@ from startpage.models import ServerInfo
 from startpage.serializers import UserSerializer
 from mainpage.models import UserProfile, Sub, Publ, PublRating, PublRatingUser, Rating, UserProfileStar
 from home.models import Hashtag, Mention
-from mainpage.serializers import UserProfileSerializer, SubSerializer, PublSerializer
+#from mainpage.serializers import UserProfileSerializer, SubSerializer, PublSerializer
 from django.db.models import Q, Count
 from django.contrib.auth.hashers import check_password
 
