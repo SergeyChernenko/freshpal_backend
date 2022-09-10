@@ -93,7 +93,7 @@ class VerificationViewSet(viewsets.ModelViewSet):
   @action(methods=['POST'], detail=False)
   def check_data(self, request):
     result = []
-    exception = ['new','rec','activity','hashtag','settings','support','donat']
+    exception = ['sub','rec','activity','hashtag','settings','support','donat','backend','static','team']
     if User.objects.filter(username=request.data['username']).exists():
       result.append(False)
     else:
